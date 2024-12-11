@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ocs2_core/Types.h>
 #include <ocs2_core/initialization/Initializer.h>
 #include <ocs2_ddp/DDP_Settings.h>
+#include <ocs2_sqp/SqpSettings.h>
 #include <ocs2_mpc/MPC_Settings.h>
 #include <ocs2_oc/rollout/TimeTriggeredRollout.h>
 #include <ocs2_robotic_tools/common/RobotInterface.h>
@@ -69,6 +70,8 @@ class CartPoleInterface final : public RobotInterface {
 
   ddp::Settings& ddpSettings() { return ddpSettings_; }
 
+  sqp::Settings& sqpSettings() { return sqpSettings_; }
+
   mpc::Settings& mpcSettings() { return mpcSettings_; }
 
   OptimalControlProblem& optimalControlProblem() { return problem_; }
@@ -80,6 +83,7 @@ class CartPoleInterface final : public RobotInterface {
 
  private:
   ddp::Settings ddpSettings_;
+  sqp::Settings sqpSettings_;
   mpc::Settings mpcSettings_;
 
   OptimalControlProblem problem_;

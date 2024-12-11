@@ -41,6 +41,44 @@ namespace cartpole {
  * CartPole dynamics.
  * refer to: https://pdfs.semanticscholar.org/f95b/9d4cc0814034f2e601cb91fcd70b2e806420.pdf
  */
+// class CartPoleSytemDynamics : public SystemDynamicsBaseAD {
+//  public:
+//   CartPoleSytemDynamics(const CartPoleParameters& cartPoleParameters, const std::string& libraryFolder, bool verbose)
+//       : param_(cartPoleParameters) {
+//     initialize(STATE_DIM, INPUT_DIM, "cartpole_dynamics", libraryFolder, true, verbose);
+//   }
+
+//   ~CartPoleSytemDynamics() override = default;
+
+//   CartPoleSytemDynamics(const CartPoleSytemDynamics& rhs) = default;
+
+//   CartPoleSytemDynamics* clone() const override { return new CartPoleSytemDynamics(*this); }
+
+//   ad_vector_t systemFlowMap(ad_scalar_t time, const ad_vector_t& state, const ad_vector_t& input,
+//                             const ad_vector_t& parameters) const override {
+//     const ad_scalar_t cosTheta = cos(state(0));
+//     const ad_scalar_t sinTheta = sin(state(0));
+
+//     // Inertia tensor
+//     Eigen::Matrix<ad_scalar_t, 2, 2> I;
+//     I << static_cast<ad_scalar_t>(param_.poleSteinerMoi_), static_cast<ad_scalar_t>(param_.poleMass_ * param_.poleHalfLength_ * cosTheta),
+//         static_cast<ad_scalar_t>(param_.poleMass_ * param_.poleHalfLength_ * cosTheta),
+//         static_cast<ad_scalar_t>(param_.cartMass_ + param_.poleMass_);
+
+//     // RHS
+//     Eigen::Matrix<ad_scalar_t, 2, 1> rhs(param_.poleMass_ * param_.poleHalfLength_ * param_.gravity_ * sinTheta,
+//                                          input(0) + param_.poleMass_ * param_.poleHalfLength_ * pow(state(2), 2) * sinTheta);
+
+//     // dxdt
+//     ad_vector_t stateDerivative(STATE_DIM);
+//     stateDerivative << state.tail<2>(), I.inverse() * rhs;
+//     return stateDerivative;
+//   }
+
+//  private:
+//   CartPoleParameters param_;
+// };
+
 class CartPoleSytemDynamics : public SystemDynamicsBaseAD {
  public:
   CartPoleSytemDynamics(const CartPoleParameters& cartPoleParameters, const std::string& libraryFolder, bool verbose)
@@ -56,22 +94,35 @@ class CartPoleSytemDynamics : public SystemDynamicsBaseAD {
 
   ad_vector_t systemFlowMap(ad_scalar_t time, const ad_vector_t& state, const ad_vector_t& input,
                             const ad_vector_t& parameters) const override {
-    const ad_scalar_t cosTheta = cos(state(0));
-    const ad_scalar_t sinTheta = sin(state(0));
+    
+    const ad_scalar_t x = state(0);
+    const ad_scalar_t vel = state(1);
+    const ad_scalar_t theta = state(2);
+    const ad_scalar_t theta_dot = state(3);
+    const ad_scalar_t force = input(0);
 
-    // Inertia tensor
-    Eigen::Matrix<ad_scalar_t, 2, 2> I;
-    I << static_cast<ad_scalar_t>(param_.poleSteinerMoi_), static_cast<ad_scalar_t>(param_.poleMass_ * param_.poleHalfLength_ * cosTheta),
-        static_cast<ad_scalar_t>(param_.poleMass_ * param_.poleHalfLength_ * cosTheta),
-        static_cast<ad_scalar_t>(param_.cartMass_ + param_.poleMass_);
+    const ad_scalar_t sin_theta = sin(theta);
+    const ad_scalar_t cos_theta = cos(theta);
 
-    // RHS
-    Eigen::Matrix<ad_scalar_t, 2, 1> rhs(param_.poleMass_ * param_.poleHalfLength_ * param_.gravity_ * sinTheta,
-                                         input(0) + param_.poleMass_ * param_.poleHalfLength_ * pow(state(2), 2) * sinTheta);
+    const ad_scalar_t m_c = static_cast<ad_scalar_t>(param_.cartMass_);
+    const ad_scalar_t m_p = static_cast<ad_scalar_t>(param_.poleMass_);
+    const ad_scalar_t l_p = static_cast<ad_scalar_t>(param_.poleLength_);
+    const ad_scalar_t gravity_ = static_cast<ad_scalar_t>(param_.gravity_);
 
-    // dxdt
+    // continuous model 
     ad_vector_t stateDerivative(STATE_DIM);
-    stateDerivative << state.tail<2>(), I.inverse() * rhs;
+    stateDerivative << vel,
+
+                       1.0 / (m_c + m_p * sin_theta * sin_theta) * 
+                                    (force + m_p * sin_theta * (l_p * theta_dot * theta_dot + 
+                                    gravity_ * cos_theta)),
+                        
+                        theta_dot,
+
+                        1.0 / (l_p * (m_c + m_p * sin_theta * sin_theta)) *
+                                    (-force * cos_theta - m_p * l_p * theta_dot * theta_dot * 
+                                    cos_theta * sin_theta - (m_c + m_p) * gravity_ * sin_theta);
+    
     return stateDerivative;
   }
 

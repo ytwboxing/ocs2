@@ -7,6 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CATKIN_PACKAGE_DEPENDENCIES
   ocs2_core
   ocs2_ddp
+  ocs2_sqp
   ocs2_mpc
   ocs2_robotic_tools
 )
@@ -114,14 +115,27 @@ install(DIRECTORY config
 ## to see the summary of unit test results run
 ## $ catkin_test_results ../../../build/ocs2_cartpole
 
-catkin_add_gtest(test_cartpole
-  test/testCartpole.cpp
-)
-target_include_directories(test_cartpole PRIVATE
+# catkin_add_gtest(test_cartpole
+#   test/testCartpole.cpp
+# )
+# target_include_directories(test_cartpole PRIVATE
+#   ${PROJECT_BINARY_DIR}/include
+# )
+# target_link_libraries(test_cartpole
+#   gtest_main
+#   ${PROJECT_NAME}
+#   ${catkin_LIBRARIES}
+#   ${Boost_LIBRARIES}
+# )
+
+add_executable(main test/main.cpp)
+
+target_include_directories(main PRIVATE
   ${PROJECT_BINARY_DIR}/include
 )
-target_link_libraries(test_cartpole
-  gtest_main
+
+target_link_libraries(main
+  # gtest_main
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}

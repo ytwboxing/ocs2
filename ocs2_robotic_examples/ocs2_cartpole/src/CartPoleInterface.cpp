@@ -72,8 +72,8 @@ CartPoleInterface::CartPoleInterface(const std::string& taskFile, const std::str
     std::cerr << "x_final:  " << xFinal_.transpose() << "\n";
   }
 
-  // DDP-MPC settings
   ddpSettings_ = ddp::loadSettings(taskFile, "ddp", verbose);
+  sqpSettings_ = sqp::loadSettings(taskFile, "sqp", verbose);
   mpcSettings_ = mpc::loadSettings(taskFile, "mpc", verbose);
 
   /*
@@ -112,14 +112,23 @@ CartPoleInterface::CartPoleInterface(const std::string& taskFile, const std::str
     loadData::loadPenaltyConfig(taskFile, "bounds_penalty_config", boundsConfig, verbose);
     return penalty_type::create(boundsConfig);
   };
+  const double u_max = 5.;
+  const double u_min = -10.;
+  const double x_max = 1.5;
+  const double x_min = -1.5;
   auto getConstraint = [&]() {
-    constexpr size_t numIneqConstraint = 2;
-    const vector_t e = (vector_t(numIneqConstraint) << cartPoleParameters.maxInput_, cartPoleParameters.maxInput_).finished();
-    const vector_t D = (vector_t(numIneqConstraint) << 1.0, -1.0).finished();
-    const matrix_t C = matrix_t::Zero(numIneqConstraint, STATE_DIM);
+    constexpr size_t numIneqConstraint = 4;
+    vector_t e(numIneqConstraint);
+    e << x_max, -x_min, u_max, -u_min;
+    vector_t D(numIneqConstraint);
+    D << 0.0, 0.0, -1.0, 1.0;
+    matrix_t C = matrix_t::Zero(numIneqConstraint, STATE_DIM);
+    C(0, 0) = -1.0;
+    C(1, 0) = 1.0;
     return std::make_unique<LinearStateInputConstraint>(e, C, D);
   };
-  problem_.inequalityLagrangianPtr->add("InputLimits", create(getConstraint(), getPenalty()));
+
+  problem_.inequalityLagrangianPtr->add("StateInputLimits", create(getConstraint(), getPenalty()));
 
   // Initialization
   cartPoleInitializerPtr_.reset(new DefaultInitializer(INPUT_DIM));

@@ -84,9 +84,9 @@ struct CartPoleParameters {
 
  private:
   void computeInertiaTerms() {
-    poleHalfLength_ = poleLength_ / 2.0;
-    poleMoi_ = 1.0 / 12.0 * poleMass_ * (poleLength_ * poleLength_);
-    poleSteinerMoi_ = poleMoi_ + poleMass_ * (poleHalfLength_ * poleHalfLength_);
+    // poleHalfLength_ = poleLength_ / 2.0;
+    // poleMoi_ = 1.0 / 12.0 * poleMass_ * (poleLength_ * poleLength_);
+    // poleSteinerMoi_ = poleMoi_ + poleMass_ * (poleHalfLength_ * poleHalfLength_);
   }
 };
 

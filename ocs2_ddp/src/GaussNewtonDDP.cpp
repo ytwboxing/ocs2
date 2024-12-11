@@ -206,6 +206,8 @@ void GaussNewtonDDP::getPrimalSolution(scalar_t finalTime, PrimalSolution* prima
   // total number of nodes
   const int N = optimizedPrimalSolution_.timeTrajectory_.size();
 
+  // std::cout << "========================== total N: " << N << std::endl;
+
   auto getRequestedDataLength = [](const scalar_array_t& timeTrajectory, scalar_t time) {
     int index = std::distance(timeTrajectory.cbegin(), std::upper_bound(timeTrajectory.cbegin(), timeTrajectory.cend(), time));
     // fix solution time window to include 1 point beyond requested time
