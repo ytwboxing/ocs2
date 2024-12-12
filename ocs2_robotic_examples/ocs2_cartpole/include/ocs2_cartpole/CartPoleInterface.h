@@ -34,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ocs2_core/initialization/Initializer.h>
 #include <ocs2_ddp/DDP_Settings.h>
 #include <ocs2_sqp/SqpSettings.h>
+#include <ocs2_ipm/IpmSettings.h>
 #include <ocs2_mpc/MPC_Settings.h>
 #include <ocs2_oc/rollout/TimeTriggeredRollout.h>
 #include <ocs2_robotic_tools/common/RobotInterface.h>
@@ -72,6 +73,8 @@ class CartPoleInterface final : public RobotInterface {
 
   sqp::Settings& sqpSettings() { return sqpSettings_; }
 
+  ipm::Settings& ipmSettings() { return ipmSettings_; }
+
   mpc::Settings& mpcSettings() { return mpcSettings_; }
 
   OptimalControlProblem& optimalControlProblem() { return problem_; }
@@ -81,9 +84,13 @@ class CartPoleInterface final : public RobotInterface {
 
   const Initializer& getInitializer() const override { return *cartPoleInitializerPtr_; }
 
+  std::unique_ptr<StateInputCost> getStateInputLimitSoftConstraint(const std::string& taskFile);
+
  private:
   ddp::Settings ddpSettings_;
   sqp::Settings sqpSettings_;
+  ipm::Settings ipmSettings_;
+  
   mpc::Settings mpcSettings_;
 
   OptimalControlProblem problem_;
@@ -93,6 +100,11 @@ class CartPoleInterface final : public RobotInterface {
 
   vector_t initialState_{STATE_DIM};
   vector_t xFinal_{STATE_DIM};
+
+  const double u_max = 5.;
+  const double u_min = -10.;
+  const double x_max = 1.5;
+  const double x_min = -1.5;
 };
 
 }  // namespace cartpole

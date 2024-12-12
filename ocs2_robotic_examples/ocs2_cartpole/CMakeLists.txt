@@ -4,10 +4,14 @@ project(ocs2_cartpole)
 # Generate compile_commands.json for clang tools
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_CXX_FLAGS "-std=c++17 -O3")
+
 set(CATKIN_PACKAGE_DEPENDENCIES
   ocs2_core
   ocs2_ddp
   ocs2_sqp
+  ocs2_ipm
   ocs2_mpc
   ocs2_robotic_tools
 )

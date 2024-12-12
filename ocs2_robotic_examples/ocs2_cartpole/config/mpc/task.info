@@ -4,7 +4,6 @@ cartpole_parameters
   cartMass     1.0
   poleMass     1.0
   poleLength   1.0
-  maxInput     5.0
   gravity      9.81
 }
 
@@ -20,17 +19,14 @@ ddp
   constraintTolerance            1e-2
 
   displayInfo                    false
-  displayShortSummary            false
+  displayShortSummary            true
   checkNumericalStability        false
 
   AbsTolODE                      1e-9
   RelTolODE                      1e-6
   maxNumStepsPerSecond           100000
   timeStep                       5e-2
-  backwardPassIntegratorType     ODE45
-
-  inequalityConstraintMu         100.0
-  inequalityConstraintDelta      1.1
+  backwardPassIntegratorType     EULER
 
   preComputeRiccatiTerms         true
 
@@ -41,32 +37,12 @@ ddp
   {
     minStepLength                1e-3
     maxStepLength                1.0
-    hessianCorrectionStrategy    EIGENVALUE_MODIFICATION
+    hessianCorrectionStrategy    DIAGONAL_SHIFT ; DIAGONAL_SHIFT, CHOLESKY_MODIFICATION, EIGENVALUE_MODIFICATION, GERSHGORIN_MODIFICATION
     hessianCorrectionMultiple    1e-6
   }
 }
 
-; Multiple_Shooting SQP settings
-sqp
-{
-  nThreads                              4
-  dt                                    0.05
-  sqpIteration                          200
-  deltaTol                              1e-4
-  g_max                                 1e-2
-  g_min                                 1e-6
-  inequalityConstraintMu                0.1
-  inequalityConstraintDelta             5.0
-  projectStateInputEqualityConstraints  true
-  printSolverStatistics                 false
-  printSolverStatus                     true
-  printLinesearch                       false
-  useFeedbackPolicy                     false
-  integratorType                        RK2
-  threadPriority                        50
-}
-
-; Rollout settings
+; ddp Rollout settings
 rollout
 {
   AbsTolODE                    1e-9
@@ -74,7 +50,80 @@ rollout
   timeStep                     5e-2
   maxNumStepsPerSecond         100000
   checkNumericalStability      false
-  integratorType               ODE45
+  integratorType               EULER
+}
+
+; augmented Lagrangian
+bounds_penalty_config
+{
+  scale                       1.0 ; penalty
+  stepSize                    1.0 ; lambda_new = lambda - stepSize * scale * c(x)
+}
+
+
+; Multiple_Shooting SQP settings
+sqp
+{
+  nThreads                              1
+  dt                                    0.05
+  sqpIteration                          60
+
+  deltaTol                              1e-4
+  alpha_min                             1e-4
+
+  costTol                               0.1
+  g_max                                 1e-1 ; constr violation max
+  g_min                                 1e-2 ; constr violation min
+
+  projectStateInputEqualityConstraints  true
+  printSolverStatistics                 true
+  printSolverStatus                     false
+  printLinesearch                       false
+  useFeedbackPolicy                     false
+  createValueFunction                   false
+  integratorType                        EULER
+  threadPriority                        50
+  enableLogging                         false
+}
+
+; sqp relax barrier function params
+soft_constraint
+{
+  muStateLimits          0.1
+  deltaStateLimits       1e-2
+
+  muInputLimits          0.1
+  deltaInputLimits       1e-2
+}
+
+; ipm 
+ipm 
+{
+  deltaTol                              1e-4
+  alpha_min                             1e-4
+  costTol                               0.1
+  g_max                                 1e-1 ; constr violation max
+  g_min                                 1e-2 ; constr violation min
+
+  dt                                    0.05
+  ipmIteration                          100
+  useFeedbackPolicy                     false
+  printSolverStatistics                 true
+  printSolverStatus                     false
+  printLinesearch                       false
+
+  nThreads                              1
+  useFeedbackPolicy                     false
+  createValueFunction                   false
+  integratorType                        EULER
+  threadPriority                        50
+  enableLogging                         false
+
+  initialBarrierParameter               1.0e-02
+  targetBarrierParameter                1.0e-04
+  barrierLinearDecreaseFactor           0.2
+  barrierSuperlinearDecreasePower       1.5
+  fractionToBoundaryMargin              0.995
 }
 
 ; MPC settings
@@ -88,12 +137,6 @@ mpc
 
   mpcDesiredFrequency         100   ; [Hz]
   mrtDesiredFrequency         400   ; [Hz]
-}
-
-bounds_penalty_config
-{
-  scale                       0.1
-  stepSize                    1.0
 }
 
 ; initial state

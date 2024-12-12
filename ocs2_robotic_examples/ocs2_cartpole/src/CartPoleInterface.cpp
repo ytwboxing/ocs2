@@ -32,9 +32,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ocs2_cartpole/CartPoleInterface.h"
 #include "ocs2_cartpole/dynamics/CartPoleSystemDynamics.h"
+#include "ocs2_cartpole/StateInputIneqConstraint.h"
 
 #include <ocs2_core/augmented_lagrangian/AugmentedLagrangian.h>
+
+#include <ocs2_core/soft_constraint/StateInputSoftBoxConstraint.h>
+#include <ocs2_core/soft_constraint/StateSoftConstraint.h>
+#include <ocs2_core/soft_constraint/StateInputSoftConstraint.h>
+
+#include <ocs2_core/constraint/LinearStateConstraint.h>
 #include <ocs2_core/constraint/LinearStateInputConstraint.h>
+
 #include <ocs2_core/cost/QuadraticStateCost.h>
 #include <ocs2_core/cost/QuadraticStateInputCost.h>
 #include <ocs2_core/initialization/DefaultInitializer.h>
@@ -74,6 +82,8 @@ CartPoleInterface::CartPoleInterface(const std::string& taskFile, const std::str
 
   ddpSettings_ = ddp::loadSettings(taskFile, "ddp", verbose);
   sqpSettings_ = sqp::loadSettings(taskFile, "sqp", verbose);
+  ipmSettings_ = ipm::loadSettings(taskFile, "ipm", verbose);
+
   mpcSettings_ = mpc::loadSettings(taskFile, "mpc", verbose);
 
   /*
@@ -104,7 +114,6 @@ CartPoleInterface::CartPoleInterface(const std::string& taskFile, const std::str
   auto rolloutSettings = rollout::loadSettings(taskFile, "rollout", verbose);
   rolloutPtr_.reset(new TimeTriggeredRollout(*problem_.dynamicsPtr, rolloutSettings));
 
-  // Constraints
   auto getPenalty = [&]() {
     // one can use either augmented::SlacknessSquaredHingePenalty or augmented::ModifiedRelaxedBarrierPenalty
     using penalty_type = augmented::SlacknessSquaredHingePenalty;
@@ -112,10 +121,6 @@ CartPoleInterface::CartPoleInterface(const std::string& taskFile, const std::str
     loadData::loadPenaltyConfig(taskFile, "bounds_penalty_config", boundsConfig, verbose);
     return penalty_type::create(boundsConfig);
   };
-  const double u_max = 5.;
-  const double u_min = -10.;
-  const double x_max = 1.5;
-  const double x_min = -1.5;
   auto getConstraint = [&]() {
     constexpr size_t numIneqConstraint = 4;
     vector_t e(numIneqConstraint);
@@ -128,11 +133,55 @@ CartPoleInterface::CartPoleInterface(const std::string& taskFile, const std::str
     return std::make_unique<LinearStateInputConstraint>(e, C, D);
   };
 
-  problem_.inequalityLagrangianPtr->add("StateInputLimits", create(getConstraint(), getPenalty()));
+  ////// augmented lagrangian deals with ineq constr, only for DDP
+  // problem_.inequalityLagrangianPtr->add("bound_constraint", ocs2::create(getConstraint(), getPenalty()));
+
+  ////// relax barrier deals with ineq constr, for DDP/SQP
+  // problem_.softConstraintPtr->add("bound_constraint", getStateInputLimitSoftConstraint(taskFile));
+
+  ////// IPM deals with ineq constr
+  problem_.inequalityConstraintPtr->add("bound_constraint", std::make_unique<StateInputIneqConstraint>(x_min, x_max, u_min, u_max));
 
   // Initialization
   cartPoleInitializerPtr_.reset(new DefaultInitializer(INPUT_DIM));
 }
 
+std::unique_ptr<StateInputCost> CartPoleInterface::getStateInputLimitSoftConstraint(const std::string& taskFile) {
+  boost::property_tree::ptree pt;
+  boost::property_tree::read_info(taskFile, pt);
+  
+  scalar_t muStateLimits = 1e-2;
+  scalar_t deltaStateLimits = 1e-3;
+  loadData::loadPtreeValue(pt, muStateLimits, "soft_constraint.muStateLimits", true);
+  loadData::loadPtreeValue(pt, deltaStateLimits, "soft_constraint.deltaStateLimits", true);
+
+  scalar_t muInputLimits = 1e-2;
+  scalar_t deltaInputLimits = 1e-3;
+  loadData::loadPtreeValue(pt, muInputLimits, "soft_constraint.muInputLimits", true);
+  loadData::loadPtreeValue(pt, deltaInputLimits, "soft_constraint.deltaInputLimits", true);
+
+  std::vector<StateInputSoftBoxConstraint::BoxConstraint> stateLimits;
+  stateLimits.reserve(1);
+  StateInputSoftBoxConstraint::BoxConstraint state_box_constr;
+  state_box_constr.index = 0;
+  state_box_constr.lowerBound = x_min;
+  state_box_constr.upperBound = x_max;
+  state_box_constr.penaltyPtr.reset(new RelaxedBarrierPenalty({muStateLimits, deltaStateLimits}));
+  stateLimits.push_back(std::move(state_box_constr));
+
+  std::vector<StateInputSoftBoxConstraint::BoxConstraint> inputLimits;
+  inputLimits.reserve(1);
+  StateInputSoftBoxConstraint::BoxConstraint input_box_constr;
+  input_box_constr.index = 0;
+  input_box_constr.lowerBound = u_min;
+  input_box_constr.upperBound = u_max;
+  input_box_constr.penaltyPtr.reset(new RelaxedBarrierPenalty({muInputLimits, deltaInputLimits}));
+  inputLimits.push_back(std::move(input_box_constr));
+
+  auto boxConstraints = std::make_unique<StateInputSoftBoxConstraint>(stateLimits, inputLimits);
+  boxConstraints->initializeOffset(0.0, vector_t::Zero(cartpole::STATE_DIM), vector_t::Zero(cartpole::INPUT_DIM));
+
+  return boxConstraints;
+}
 }  // namespace cartpole
 }  // namespace ocs2
