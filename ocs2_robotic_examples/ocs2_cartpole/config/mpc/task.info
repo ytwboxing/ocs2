@@ -11,10 +11,9 @@ cartpole_parameters
 ddp
 {
   algorithm                      SLQ
-
   nThreads                       1
-
   maxNumIterations               200
+
   minRelCost                     0.1
   constraintTolerance            1e-2
 
@@ -27,9 +26,7 @@ ddp
   maxNumStepsPerSecond           100000
   timeStep                       5e-2
   backwardPassIntegratorType     EULER
-
   preComputeRiccatiTerms         true
-
   useFeedbackPolicy              false
 
   strategy                       LINE_SEARCH
@@ -60,13 +57,12 @@ bounds_penalty_config
   stepSize                    1.0 ; lambda_new = lambda - stepSize * scale * c(x)
 }
 
-
 ; Multiple_Shooting SQP settings
 sqp
 {
   nThreads                              1
-  dt                                    0.05
   sqpIteration                          60
+  dt                                    0.05
 
   deltaTol                              1e-4
   alpha_min                             1e-4
@@ -125,6 +121,47 @@ ipm
   barrierSuperlinearDecreasePower       1.5
   fractionToBoundaryMargin              0.995
 }
+
+; slp 
+slp 
+{
+  slpIteration                          200     
+  scalingIteration                      1 
+  
+  deltaTol                              1e-4
+  alpha_min                             1e-4
+  costTol                               0.1
+  g_max                                 1e-1 ; constr violation max
+  g_min                                 1e-2 ; constr violation min
+
+  dt                                    0.05
+  ipmIteration                          100
+  useFeedbackPolicy                     false
+  printSolverStatistics                 true
+  printSolverStatus                     false
+  printLinesearch                       false
+
+  nThreads                              1
+  useFeedbackPolicy                     false
+  createValueFunction                   false
+  integratorType                        EULER
+  threadPriority                        50
+  enableLogging                         false
+
+  ; slp's inner QP solver PIPG(Proportional-Integral Projected Gradient)
+  pipg 
+  {
+    maxNumIterations                      3000
+  
+    absoluteTolerance                     1e-3
+    relativeTolerance                     1e-3
+    checkTerminationInterval              1
+    lowerBoundH                           50
+    displayShortSummary                   false
+  }
+
+}
+
 
 ; MPC settings
 mpc

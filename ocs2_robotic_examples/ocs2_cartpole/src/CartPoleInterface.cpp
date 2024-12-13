@@ -83,6 +83,7 @@ CartPoleInterface::CartPoleInterface(const std::string& taskFile, const std::str
   ddpSettings_ = ddp::loadSettings(taskFile, "ddp", verbose);
   sqpSettings_ = sqp::loadSettings(taskFile, "sqp", verbose);
   ipmSettings_ = ipm::loadSettings(taskFile, "ipm", verbose);
+  slpSettings_ = slp::loadSettings(taskFile, "slp", verbose);
 
   mpcSettings_ = mpc::loadSettings(taskFile, "mpc", verbose);
 
@@ -133,14 +134,14 @@ CartPoleInterface::CartPoleInterface(const std::string& taskFile, const std::str
     return std::make_unique<LinearStateInputConstraint>(e, C, D);
   };
 
-  ////// augmented lagrangian deals with ineq constr, only for DDP
+  ////// augmented lagrangian deals with ineq constr(hard), only for DDP
   // problem_.inequalityLagrangianPtr->add("bound_constraint", ocs2::create(getConstraint(), getPenalty()));
 
-  ////// relax barrier deals with ineq constr, for DDP/SQP
-  // problem_.softConstraintPtr->add("bound_constraint", getStateInputLimitSoftConstraint(taskFile));
+  ////// relax barrier deals with ineq constr(soft), for DDP/SQP/IPM/SLP
+  problem_.softConstraintPtr->add("bound_constraint", getStateInputLimitSoftConstraint(taskFile));
 
-  ////// IPM deals with ineq constr
-  problem_.inequalityConstraintPtr->add("bound_constraint", std::make_unique<StateInputIneqConstraint>(x_min, x_max, u_min, u_max));
+  ////// IPM deals with ineq constr(hard)
+  // problem_.inequalityConstraintPtr->add("bound_constraint", std::make_unique<StateInputIneqConstraint>(x_min, x_max, u_min, u_max));
 
   // Initialization
   cartPoleInitializerPtr_.reset(new DefaultInitializer(INPUT_DIM));

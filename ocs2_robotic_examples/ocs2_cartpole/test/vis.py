@@ -48,9 +48,16 @@ def func():
     fig, axs = plt.subplots(5, 1, sharex=True, figsize=(20, 15))
     plt.suptitle("cartpole(ocs2)")
     markersize_ = 4.0
-    epsilon_ = 0.1
+    epsilon_ = 0.2
+    N = len(dataset['index'].values)
+    u_max = 5.
+    u_min = -10.
+    x_max = 1.5
+    x_min = -1.5
 
     axs[0].plot(dataset['index'].values, dataset['x'].values, '.r', label='x', markersize = markersize_)
+    axs[0].plot(dataset['index'].values, x_max * np.ones(N), '-b')
+    axs[0].plot(dataset['index'].values, x_min * np.ones(N), '-b')
     axs[0].legend()
     axs[0].set_ylim(min(dataset['x'].values) - epsilon_, max(dataset['x'].values) + epsilon_)
 
@@ -67,6 +74,8 @@ def func():
     axs[3].set_ylim(min(dataset['theta-dot'].values) - epsilon_, max(dataset['theta-dot'].values) + epsilon_)
 
     axs[4].plot(dataset['index'].values, dataset['force'].values, '.r', label='force', markersize = markersize_)
+    axs[4].plot(dataset['index'].values, u_max * np.ones(N), '-b')
+    axs[4].plot(dataset['index'].values, u_min * np.ones(N), '-b')
     axs[4].legend()
     axs[4].set_ylim(min(dataset['force'].values) - epsilon_, max(dataset['force'].values) + epsilon_)
 

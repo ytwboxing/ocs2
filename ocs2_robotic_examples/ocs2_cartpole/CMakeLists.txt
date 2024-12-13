@@ -12,6 +12,7 @@ set(CATKIN_PACKAGE_DEPENDENCIES
   ocs2_ddp
   ocs2_sqp
   ocs2_ipm
+  ocs2_slp
   ocs2_mpc
   ocs2_robotic_tools
 )

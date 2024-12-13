@@ -282,6 +282,12 @@ SlpSolver::OcpSubproblemSolution SlpSolver::getOCPSolution(const vector_t& delta
       pipgSolver_.solve(threadPool_, delta_x0, dynamics_, cost_, nullptr, scalingVectors, &EInv, pipgBounds, deltaXSol, deltaUSol);
   pipgSolverTimer_.endTimer();
 
+  if (pipgStatus == pipg::SolverStatus::MAX_ITER) {
+      throw std::runtime_error("pipg solver return MAX_ITER");
+  } else if (pipgStatus == pipg::SolverStatus::UNDEFINED) {
+      throw std::runtime_error("pipg solver return UNDEFINED");
+  }
+
   // to determine if the solution is a descent direction for the cost: compute gradient(cost)' * [dx; du]
   solution.armijoDescentMetric = armijoDescentMetric(cost_, deltaXSol, deltaUSol);
 

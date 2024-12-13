@@ -42,6 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ocs2_ddp/SLQ.h>
 #include <ocs2_sqp/SqpSolver.h>
 #include <ocs2_ipm/IpmSolver.h>
+#include <ocs2_slp/SlpSolver.h>
 #include <ocs2_oc/synchronized_module/SolverObserver.h>
 
 #include "ocs2_cartpole/CartPoleInterface.h"
@@ -56,7 +57,13 @@ using namespace cartpole;
 const double timeHorizon = 5.0;
 const double dt = 0.05;
 const int N = 100;
-enum class SolverType { SLQ, ILQR, SQP, IPM };
+enum class SolverType { 
+    SLQ, 
+    ILQR, 
+    SQP, 
+    IPM,
+    SLP
+};
 
 const std::string log_path = "log.csv";
 
@@ -114,6 +121,8 @@ public:
             sqpPtr->getReferenceManager().setTargetTrajectories(initTargetTrajectories);
         } else if (solver_type == SolverType::IPM) {
             ipmPtr->getReferenceManager().setTargetTrajectories(initTargetTrajectories);
+        } else if (solver_type == SolverType::SLP) {
+            slpPtr->getReferenceManager().setTargetTrajectories(initTargetTrajectories);
         }
         
     }
@@ -122,6 +131,7 @@ public:
         auto ddpSettings = cartPoleInterfacePtr->ddpSettings();
         auto sqpSettings = cartPoleInterfacePtr->sqpSettings();
         auto ipmSettings = cartPoleInterfacePtr->ipmSettings();
+        auto slpSettings = cartPoleInterfacePtr->slpSettings();
 
         switch (solver_type) {
             case SolverType::SLQ: {
@@ -151,6 +161,13 @@ public:
 
             case SolverType::IPM: {
                 ipmPtr = std::make_unique<IpmSolver>(std::move(ipmSettings), 
+                                                     cartPoleInterfacePtr->getOptimalControlProblem(),
+                                                     cartPoleInterfacePtr->getInitializer());
+            }
+            break;
+
+            case SolverType::SLP: {
+                slpPtr = std::make_unique<SlpSolver>(std::move(slpSettings), 
                                                      cartPoleInterfacePtr->getOptimalControlProblem(),
                                                      cartPoleInterfacePtr->getInitializer());
             }
@@ -191,14 +208,15 @@ public:
     std::unique_ptr<GaussNewtonDDP> ddpPtr;
     std::unique_ptr<SqpSolver> sqpPtr;
     std::unique_ptr<IpmSolver> ipmPtr;
+    std::unique_ptr<SlpSolver> slpPtr;
 };
 
 int main() {
-    SolverType solver_type = SolverType::IPM;
+    SolverType solver_type = SolverType::SLP;
 
     TestCartpole cartpole_test(solver_type);
 
-    const int bench_num = 100;
+    const int bench_num = 1;
     int bench_iter = 0;
     std::vector<double> solve_time_vec;
 
@@ -214,6 +232,9 @@ int main() {
         } else if (solver_type == SolverType::IPM) {
             cartpole_test.ipmPtr->reset();
             cartpole_test.ipmPtr->run(0.0, cartpole_test.cartPoleInterfacePtr->getInitialState(), timeHorizon);
+        } else if (solver_type == SolverType::SLP) {
+            cartpole_test.slpPtr->reset();
+            cartpole_test.slpPtr->run(0.0, cartpole_test.cartPoleInterfacePtr->getInitialState(), timeHorizon);
         }
 
         solve_time_vec.emplace_back(sol_timer.getMs());
@@ -237,6 +258,8 @@ int main() {
                 num_point = cartpole_test.sqpPtr->primalSolution(timeHorizon).timeTrajectory_.size();
             } else if (solver_type == SolverType::IPM) {
                 num_point = cartpole_test.ipmPtr->primalSolution(timeHorizon).timeTrajectory_.size();
+            } else if (solver_type == SolverType::SLP) {
+                num_point = cartpole_test.slpPtr->primalSolution(timeHorizon).timeTrajectory_.size();
             }
             Eigen::MatrixXd u_sol(num_point, 1);
             u_sol.setZero();
@@ -259,6 +282,11 @@ int main() {
                     if (i < num_point - 1) {
                         u_sol.row(i) = cartpole_test.ipmPtr->primalSolution(timeHorizon).inputTrajectory_[i].transpose();
                     }
+                } else if (solver_type == SolverType::SLP) {
+                    x_sol.row(i) = cartpole_test.slpPtr->primalSolution(timeHorizon).stateTrajectory_[i].transpose();
+                    if (i < num_point - 1) {
+                        u_sol.row(i) = cartpole_test.slpPtr->primalSolution(timeHorizon).inputTrajectory_[i].transpose();
+                    }
                 }
             }
             
@@ -272,6 +300,8 @@ int main() {
                 time_traj = cartpole_test.sqpPtr->primalSolution(timeHorizon).timeTrajectory_;
             } else if (solver_type == SolverType::IPM) {
                 time_traj = cartpole_test.ipmPtr->primalSolution(timeHorizon).timeTrajectory_;
+            } else if (solver_type == SolverType::SLP) {
+                time_traj = cartpole_test.slpPtr->primalSolution(timeHorizon).timeTrajectory_;
             }
     
             for (int i = 0; i < num_point; ++i) {
