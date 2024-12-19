@@ -67,7 +67,7 @@ sqp
   deltaTol                              1e-4
   alpha_min                             1e-4
 
-  costTol                               0.1
+  costTol                               1e-1
   g_max                                 1e-1 ; constr violation max
   g_min                                 1e-2 ; constr violation min
 
@@ -85,10 +85,10 @@ sqp
 ; sqp relax barrier function params
 soft_constraint
 {
-  muStateLimits          0.1
+  muStateLimits          10
   deltaStateLimits       1e-2
 
-  muInputLimits          0.1
+  muInputLimits          1
   deltaInputLimits       1e-2
 }
 

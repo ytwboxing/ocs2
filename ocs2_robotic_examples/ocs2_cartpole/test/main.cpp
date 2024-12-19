@@ -212,7 +212,7 @@ public:
 };
 
 int main() {
-    SolverType solver_type = SolverType::SLP;
+    SolverType solver_type = SolverType::SQP;
 
     TestCartpole cartpole_test(solver_type);
 
